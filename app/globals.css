@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff; /* Màu nền chính */
+  --foreground: #333333; /* Màu chữ chính */
+  --primary-color: #070c00; /* Màu xanh lá cây, tông màu chính */
+  --secondary-color: #f7d439; /* Màu vàng */
+  --accent-color: #d32f2f; /* Màu đỏ cho các yếu tố cần nổi bật */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: var(--primary-color);
+}
+
+a:hover {
+  color: var(--secondary-color);
+}
+
+header {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+footer {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+button {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: var(--secondary-color);
+}
+
+h1, h2, h3 {
+  font-family: "Helvetica", sans-serif;
+  font-weight: bold;
+}
+
+.product-card {
+  background-color: #f8f8f8; /* Màu nền cho các thẻ sản phẩm */
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.product-card:hover {
+  background-color: var(--secondary-color);
+}
+
+.product-card img {
+  border-radius: 8px;
+}
+
+.text-highlight {
+  color: var(--accent-color);
+}
+@keyframes slide {
+  0% { transform: translateX(0%); }
+  33% { transform: translateX(-100%); }
+  66% { transform: translateX(-200%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-slide {
+  animation: slide 12s infinite linear;
+}
+ html, body {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  font-family: Arial, sans-serif;
+}
+
+.card-hover {
+  transition: 0.25s;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 8px 20px rgba(0,0,0,0.12);
+}
+html {
+  scroll-behavior: smooth;
+}
