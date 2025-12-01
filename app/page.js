@@ -2,21 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import ProductCard from "./components/ProductCard";
 
-// Hàm để lấy tất cả sản phẩm từ API
+// Hàm lấy tất cả sản phẩm từ API
 const getAllProducts = async () => {
   const res = await fetch("http://localhost:8000/api/products");
   if (!res.ok) {
-    throw new Error("Failed to fetch products"); // tạo nút đăng nhập và khi bấm vào sẽ dẫn đến form login
+    throw new Error("Failed to fetch products");
   }
   const data = await res.json();
   return data.data; // Trả về danh sách tất cả sản phẩm
-};
-
-const getImageUrl = (imagePath) => {
-  return imagePath.startsWith("http")
-    ? imagePath
-    : `http://localhost:8000${imagePath}`;
 };
 
 export default function Home() {
@@ -28,10 +23,10 @@ export default function Home() {
 
   const [current, setCurrent] = useState(0);
   const [products, setProducts] = useState([]);
-    const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const timeoutRef = useRef(null);
 
-
+  // Kiểm tra token để hiển thị Đăng nhập/Đăng xuất
   useEffect(() => {
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
@@ -46,19 +41,18 @@ export default function Home() {
     setIsLoggedIn(false);
   };
 
-
   // Fetch tất cả sản phẩm từ API
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const productsData = await getAllProducts(); // Lấy tất cả sản phẩm
+        const productsData = await getAllProducts();
         setProducts(productsData);
       } catch (error) {
         console.error("Error fetching products:", error);
       }
     };
     fetchData();
-  }, []); // Chỉ gọi API một lần khi component mount
+  }, []);
 
   const startAutoSlide = () => {
     timeoutRef.current = setTimeout(() => {
@@ -73,7 +67,7 @@ export default function Home() {
 
   const stopSlide = () => clearTimeout(timeoutRef.current);
 
-  // Phân loại sản phẩm theo danh mục (dựa theo tên)
+  // Phân loại sản phẩm theo tên
   const categories = {
     "Whey Protein": [],
     "Mass Gainer": [],
@@ -97,7 +91,7 @@ export default function Home() {
     }
   });
 
-   return (
+  return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-r from-blue-400 to-indigo-600 text-white p-6">
       {/* THANH TRÊN: ĐĂNG NHẬP / ĐĂNG XUẤT */}
       <div className="w-full max-w-6xl flex justify-end mb-4 gap-3">
@@ -132,7 +126,7 @@ export default function Home() {
         cao chất lượng cuộc sống!
       </p>
 
-      {/* ======================== SLIDER PRO ======================== */}
+      {/* ======================== SLIDER ======================== */}
       <div
         className="relative w-full max-w-6xl mx-auto mt-6 overflow-hidden rounded-xl shadow-xl bg-black"
         onMouseEnter={stopSlide}
@@ -181,115 +175,60 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ======================== CATEGORY: WHEY PROTEIN ======================== */}
-      <h2 className="text-3xl font-bold mb-6 mt-10">Sản Phẩm Whey Protein</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories["Whey Protein"].map((product) => (
-          <div
-            key={product.id}
-            className="bg-white text-gray-800 p-4 rounded-lg shadow-lg"
-          >
-            <div className="w-full h-48 flex items-center justify-center mb-4">
-              <img
-                src={getImageUrl(product.thumbnail || "/images/noimage.png")}
-                className="max-h-full w-auto object-contain"
-                alt={product.name}
-              />
-            </div>
-            <h2 className="font-semibold text-xl mb-4">{product.name}</h2>
-            <p className="text-lg mb-4">{product.content}</p>
-            <p className="text-xl font-semibold mb-4">{product.price}</p>
+      {/* ======================== WHEY PROTEIN ======================== */}
+    {/* WHEY PROTEIN */}
+<section
+  id="whey"
+  className="w-full max-w-6xl mt-10"
+>
+  <h2 className="text-3xl font-bold mb-4 text-left">
+    Sản Phẩm Whey Protein
+  </h2>
 
-            <div className="flex gap-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">
-                Mua Ngay
-              </button>
+  <div className="bg-white/10 rounded-3xl p-6 backdrop-blur-sm">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {categories["Whey Protein"].map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  </div>
+</section>
 
-              {/* NÚT CHI TIẾT */}
-              <Link
-                href={`/products/${product.slug}`}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-500"
-              >
-                Chi tiết
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
+{/* MASS GAINER */}
+<section
+  id="mass"
+  className="w-full max-w-6xl mt-10"
+>
+  <h2 className="text-3xl font-bold mb-4 text-left">
+    Sản Phẩm Mass Gainer
+  </h2>
 
-      {/* ======================== CATEGORY: MASS GAINER ======================== */}
-      <h2 className="text-3xl font-bold mb-6 mt-10">Sản Phẩm Mass Gainer</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories["Mass Gainer"].map((product) => (
-          <div
-            key={product.id}
-            className="bg-white text-gray-800 p-4 rounded-lg shadow-lg"
-          >
-            <div className="w-full h-48 flex items-center justify-center mb-4">
-              <img
-                src={getImageUrl(product.thumbnail || "/images/noimage.png")}
-                className="max-h-full w-auto object-contain"
-                alt={product.name}
-              />
-            </div>
-            <h2 className="font-semibold text-xl mb-4">{product.name}</h2>
-            <p className="text-lg mb-4">{product.content}</p>
-            <p className="text-xl font-semibold mb-4">{product.price}</p>
+  <div className="bg-white/10 rounded-3xl p-6 backdrop-blur-sm">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {categories["Mass Gainer"].map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  </div>
+</section>
 
-            <div className="flex gap-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">
-                Mua Ngay
-              </button>
+{/* VITAMIN */}
+<section
+  id="vitamin"
+  className="w-full max-w-6xl mt-10"
+>
+  <h2 className="text-3xl font-bold mb-4 text-left">
+    Sản Phẩm Vitamin & Khoáng Chất
+  </h2>
 
-              <Link
-                href={`/products/${product.slug}`}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-500"
-              >
-                Chi tiết
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ======================== CATEGORY: VITAMIN ======================== */}
-      <h2 className="text-3xl font-bold mb-6 mt-10">
-        Sản Phẩm Vitamin & Khoáng Chất
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories["Vitamin & Khoáng Chất"].map((product) => (
-          <div
-            key={product.id}
-            className="bg-white text-gray-800 p-4 rounded-lg shadow-lg"
-          >
-            <div className="w-full h-48 flex items-center justify-center mb-4">
-              <img
-                src={getImageUrl(product.thumbnail || "/images/noimage.png")}
-                className="max-h-full w-auto object-contain"
-                alt={product.name}
-              />
-            </div>
-            <h2 className="font-semibold text-xl mb-4">{product.name}</h2>
-            <p className="text-lg mb-4">{product.content}</p>
-            <p className="text-xl font-semibold mb-4">{product.price}</p>
-
-            <div className="flex gap-3">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500">
-                Mua Ngay
-              </button>
-
-            {/* nút chi tiết */}
-              <Link
-                href={`/products/${product.slug}`}
-                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-500"
-              >
-                Chi tiết
-              </Link>
-
-            </div>
-          </div>
-        ))}
-      </div>
+  <div className="bg-white/10 rounded-3xl p-6 backdrop-blur-sm">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {categories["Vitamin & Khoáng Chất"].map((product) => (
+        <ProductCard key={product.id} product={product} />
+      ))}
+    </div>
+  </div>
+</section>
     </main>
   );
 }

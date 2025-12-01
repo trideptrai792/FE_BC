@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroui/react": "^2.8.5",
+    "framer-motion": "^12.23.25",
     "next": "16.0.3",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "tailwind-variants": "^3.2.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
