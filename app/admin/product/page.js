@@ -52,6 +52,48 @@ export default function AdminProductPage() {
     fetchProducts();
   }, []);
 
+
+  // THÊM HÀM MỚI phía trên return
+const handleThumbnailFileChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
+    setError("");
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    // KHÔNG set "Content-Type": "application/json" cho FormData
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    const res = await fetch(`${API_BASE}/upload-image`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Upload ảnh thất bại");
+    }
+
+    const data = await res.json();
+
+    // Gán URL ảnh vào field thumbnail của form
+    setForm((prev) => ({
+      ...prev,
+      thumbnail: data.url,
+    }));
+
+    alert("Upload ảnh thành công");
+  } catch (e) {
+    console.error(e);
+    setError(e.message || "Lỗi khi upload ảnh");
+  }
+};
+
   // ============ CHỌN SẢN PHẨM ĐỂ SỬA ============
   const handleEditClick = (product) => {
     setEditingProduct(product);
@@ -239,15 +281,35 @@ export default function AdminProductPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Thumbnail (URL)</label>
-                  <input
-                    name="thumbnail"
-                    value={form.thumbnail}
-                    onChange={handleChange}
-                    className="w-full border rounded px-2 py-1"
-                  />
-                </div>
+         <div>
+  <label className="block text-sm font-medium mb-1">
+    Thumbnail (URL)
+  </label>
+  <input
+    name="thumbnail"
+    value={form.thumbnail}
+    onChange={handleChange}
+    className="w-full border rounded px-2 py-1 mb-2"
+    placeholder="Hoặc để trống rồi chọn file bên dưới"
+  />
+
+  {/* input chọn file từ thư mục */}
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleThumbnailFileChange}
+    className="w-full text-sm"
+  />
+
+  {/* preview ảnh sau khi chọn / upload */}
+  {form.thumbnail && (
+    <img
+      src={form.thumbnail}
+      alt="Preview thumbnail"
+      className="mt-2 w-24 h-24 object-contain border"
+    />
+  )}
+</div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">Mô tả</label>

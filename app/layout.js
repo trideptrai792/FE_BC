@@ -75,6 +75,11 @@ export default function RootLayout({ children }) {
       <a href="#vitamin" className="hover:text-yellow-300">Vitamin & Khoáng Chất</a>
     </li>
 
+
+        <li>
+      <a href="/posts" className="hover:text-yellow-300">Tin Tức & Bài Viết</a>
+    </li>
+
   </ul>
 </nav>
 
