@@ -57,6 +57,7 @@ export default function AdminLayout({ children }) {
           <Link href="/admin/user" className="block p-2 rounded hover:bg-gray-200">
             User
           </Link>
+          <Link href="/admin/flash-sale">Flash Sale</Link>
         </nav>
       </aside>
 

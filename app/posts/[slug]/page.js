@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 export default function PostDetail({ params }) {
-  const { slug } = params;
+  // params là Promise → dùng React.use() để lấy slug
+  const { slug } = use(params);
+
   const [post, setPost] = useState(null);
 
   useEffect(() => {
     fetch(`http://localhost:8000/api/posts/${slug}`)
       .then((res) => res.json())
-      .then((data) => setPost(data.data || null));
+      .then((data) => setPost(data.data || data || null));
   }, [slug]);
 
   if (!post)
@@ -20,6 +22,7 @@ export default function PostDetail({ params }) {
       <img
         src={post.thumbnail}
         className="w-full h-80 object-cover rounded mb-6"
+        alt={post.title}
       />
 
       <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
@@ -28,7 +31,6 @@ export default function PostDetail({ params }) {
         Đăng ngày: {new Date(post.created_at).toLocaleDateString()}
       </p>
 
-      {/* Render HTML từ DB */}
       <div
         className="prose prose-lg"
         dangerouslySetInnerHTML={{ __html: post.content }}

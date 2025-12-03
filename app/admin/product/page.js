@@ -10,7 +10,9 @@ export default function AdminProductPage() {
   const [error, setError] = useState("");
 
   const [editingProduct, setEditingProduct] = useState(null); // sản phẩm đang sửa
-  const [form, setForm] = useState({
+  const [isCreating, setIsCreating] = useState(false); // đang ở mode thêm mới hay không
+
+  const emptyForm = {
     name: "",
     slug: "",
     price: "",
@@ -18,7 +20,11 @@ export default function AdminProductPage() {
     content: "",
     category_id: "",
     status: 1,
-  });
+  };
+
+  const [form, setForm] = useState(emptyForm);
+
+  const resetForm = () => setForm(emptyForm);
 
   // ============ LẤY TOKEN TỪ LOCALSTORAGE ============
   const getAuthHeaders = () => {
@@ -52,60 +58,68 @@ export default function AdminProductPage() {
     fetchProducts();
   }, []);
 
+  // ============ UPLOAD ẢNH THUMBNAIL ============
+  const handleThumbnailFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  // THÊM HÀM MỚI phía trên return
-const handleThumbnailFileChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    try {
+      setError("");
 
-  try {
-    setError("");
+      const formData = new FormData();
+      formData.append("image", file);
 
-    const formData = new FormData();
-    formData.append("image", file);
+      // KHÔNG set "Content-Type": "application/json" cho FormData
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // KHÔNG set "Content-Type": "application/json" cho FormData
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch(`${API_BASE}/upload-image`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: formData,
+      });
 
-    const res = await fetch(`${API_BASE}/upload-image`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      body: formData,
-    });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Upload ảnh thất bại");
+      }
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Upload ảnh thất bại");
+      const data = await res.json();
+
+      // Gán URL ảnh vào field thumbnail của form
+      setForm((prev) => ({
+        ...prev,
+        thumbnail: data.url,
+      }));
+
+      alert("Upload ảnh thành công");
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Lỗi khi upload ảnh");
     }
-
-    const data = await res.json();
-
-    // Gán URL ảnh vào field thumbnail của form
-    setForm((prev) => ({
-      ...prev,
-      thumbnail: data.url,
-    }));
-
-    alert("Upload ảnh thành công");
-  } catch (e) {
-    console.error(e);
-    setError(e.message || "Lỗi khi upload ảnh");
-  }
-};
+  };
 
   // ============ CHỌN SẢN PHẨM ĐỂ SỬA ============
   const handleEditClick = (product) => {
+    setIsCreating(false);
     setEditingProduct(product);
     setForm({
       name: product.name || "",
       slug: product.slug || "",
-      price: product.price?.replace(/[^\d.]/g, "") || "", // nếu BE trả dạng "1,250,000.00" thì bạn có thể xử lý lại
+      // BE đang trả price dạng đã format → loại bỏ ký tự không phải số/chấm
+      price: product.price?.replace(/[^\d.]/g, "") || "",
       thumbnail: product.thumbnail || "",
       content: product.content || "",
       category_id: product.category_id || "",
       status: product.status ?? 1,
     });
+  };
+
+  // ============ BẤM THÊM SẢN PHẨM ============
+  const handleCreateClick = () => {
+    setEditingProduct(null);
+    resetForm();
+    setIsCreating(true);
   };
 
   // ============ CẬP NHẬT FORM ============
@@ -114,7 +128,7 @@ const handleThumbnailFileChange = async (e) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ============ GỬI LÊN API ĐỂ CẬP NHẬT ============
+  // ============ GỬI LÊN API ĐỂ CẬP NHẬT (PUT) ============
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
@@ -127,6 +141,8 @@ const handleThumbnailFileChange = async (e) => {
         body: JSON.stringify({
           ...form,
           price: Number(form.price),
+          category_id: form.category_id ? Number(form.category_id) : null,
+          status: Number(form.status),
         }),
       });
 
@@ -146,6 +162,42 @@ const handleThumbnailFileChange = async (e) => {
     } catch (e) {
       console.error(e);
       setError(e.message || "Lỗi khi cập nhật sản phẩm");
+    }
+  };
+
+  // ============ GỬI LÊN API ĐỂ THÊM MỚI (POST) ============
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setError("");
+      const res = await fetch(`${API_BASE}/products`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          category_id: form.category_id ? Number(form.category_id) : null,
+          status: Number(form.status),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Thêm sản phẩm thất bại");
+      }
+
+      const created = await res.json(); // ProductResource
+
+      // thêm vào danh sách (đầu danh sách)
+      setProducts((prev) => [created.data, ...prev]);
+
+      resetForm();
+      setIsCreating(false);
+      alert("Thêm sản phẩm thành công");
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "Lỗi khi thêm sản phẩm");
     }
   };
 
@@ -176,7 +228,16 @@ const handleThumbnailFileChange = async (e) => {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Quản lý sản phẩm</h2>
+      {/* header + nút thêm */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">Quản lý sản phẩm</h2>
+        <button
+          onClick={handleCreateClick}
+          className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-500"
+        >
+          Thêm sản phẩm
+        </button>
+      </div>
 
       {error && <p className="mb-4 text-red-600 text-sm">{error}</p>}
 
@@ -243,6 +304,141 @@ const handleThumbnailFileChange = async (e) => {
             </tbody>
           </table>
 
+          {/* FORM THÊM MỚI SẢN PHẨM */}
+          {isCreating && (
+            <div className="mt-8 bg-white p-4 rounded shadow">
+              <h3 className="text-lg font-semibold mb-3">
+                Thêm sản phẩm mới
+              </h3>
+
+              <form
+                onSubmit={handleCreateSubmit}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1">Tên</label>
+                  <input
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Slug</label>
+                  <input
+                    name="slug"
+                    value={form.slug}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    placeholder="Nếu để trống BE sẽ tự tạo"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Giá</label>
+                  <input
+                    name="price"
+                    value={form.price}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    placeholder="Ví dụ: 1250000"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Thumbnail (URL)
+                  </label>
+                  <input
+                    name="thumbnail"
+                    value={form.thumbnail}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    placeholder="Hoặc để trống rồi chọn file bên dưới"
+                  />
+
+                  {/* input chọn file từ thư mục */}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailFileChange}
+                    className="w-full text-sm"
+                  />
+
+                  {/* preview ảnh sau khi chọn / upload */}
+                  {form.thumbnail && (
+                    <img
+                      src={form.thumbnail}
+                      alt="Preview thumbnail"
+                      className="mt-2 w-24 h-24 object-contain border"
+                    />
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium mb-1">
+                    Mô tả
+                  </label>
+                  <textarea
+                    name="content"
+                    value={form.content}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1 h-20"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Category ID
+                  </label>
+                  <input
+                    name="category_id"
+                    value={form.category_id}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                    placeholder="Ví dụ: 1"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Trạng thái
+                  </label>
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1"
+                  >
+                    <option value={1}>Hiển thị</option>
+                    <option value={0}>Ẩn</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 flex gap-3 mt-2">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-500"
+                  >
+                    Lưu sản phẩm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreating(false);
+                      resetForm();
+                    }}
+                    className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* FORM SỬA SẢN PHẨM */}
           {editingProduct && (
             <div className="mt-8 bg-white p-4 rounded shadow">
@@ -250,7 +446,10 @@ const handleThumbnailFileChange = async (e) => {
                 Sửa sản phẩm: {editingProduct.name}
               </h3>
 
-              <form onSubmit={handleUpdateSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form
+                onSubmit={handleUpdateSubmit}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
                 <div>
                   <label className="block text-sm font-medium mb-1">Tên</label>
                   <input
@@ -281,38 +480,38 @@ const handleThumbnailFileChange = async (e) => {
                   />
                 </div>
 
-         <div>
-  <label className="block text-sm font-medium mb-1">
-    Thumbnail (URL)
-  </label>
-  <input
-    name="thumbnail"
-    value={form.thumbnail}
-    onChange={handleChange}
-    className="w-full border rounded px-2 py-1 mb-2"
-    placeholder="Hoặc để trống rồi chọn file bên dưới"
-  />
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Thumbnail (URL)
+                  </label>
+                  <input
+                    name="thumbnail"
+                    value={form.thumbnail}
+                    onChange={handleChange}
+                    className="w-full border rounded px-2 py-1 mb-2"
+                    placeholder="Hoặc để trống rồi chọn file bên dưới"
+                  />
 
-  {/* input chọn file từ thư mục */}
-  <input
-    type="file"
-    accept="image/*"
-    onChange={handleThumbnailFileChange}
-    className="w-full text-sm"
-  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleThumbnailFileChange}
+                    className="w-full text-sm"
+                  />
 
-  {/* preview ảnh sau khi chọn / upload */}
-  {form.thumbnail && (
-    <img
-      src={form.thumbnail}
-      alt="Preview thumbnail"
-      className="mt-2 w-24 h-24 object-contain border"
-    />
-  )}
-</div>
+                  {form.thumbnail && (
+                    <img
+                      src={form.thumbnail}
+                      alt="Preview thumbnail"
+                      className="mt-2 w-24 h-24 object-contain border"
+                    />
+                  )}
+                </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Mô tả</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Mô tả
+                  </label>
                   <textarea
                     name="content"
                     value={form.content}
@@ -322,7 +521,9 @@ const handleThumbnailFileChange = async (e) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Category ID</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Category ID
+                  </label>
                   <input
                     name="category_id"
                     value={form.category_id}
@@ -332,7 +533,9 @@ const handleThumbnailFileChange = async (e) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Trạng thái</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Trạng thái
+                  </label>
                   <select
                     name="status"
                     value={form.status}
