@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import ProductCard from "./components/ProductCard";
 import FlashSaleSection from "./components/FlashSaleSection";
 
-// Hàm lấy tất cả sản phẩm từ API
+import { productService } from "./lib/productService";
 const getAllProducts = async () => {
-  const res = await fetch("http://localhost:8000/api/products");
-  if (!res.ok) {
-    throw new Error("Failed to fetch products");
-  }
-  const data = await res.json();
-  return data.data || []; // Trả về danh sách tất cả sản phẩm
+  const res = await axios.get("http://localhost:8000/api/products");
+ 
+  return res.data.data || [];
 };
 
 export default function Home() {
@@ -26,10 +24,10 @@ export default function Home() {
   const timeoutRef = useRef(null);
 
   // Fetch tất cả sản phẩm từ API
-  useEffect(() => {
+   useEffect(() => {
     const fetchData = async () => {
       try {
-        const productsData = await getAllProducts();
+        const productsData = await productService.getAll();
         setProducts(productsData);
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -37,7 +35,6 @@ export default function Home() {
     };
     fetchData();
   }, []);
-
   const startAutoSlide = () => {
     timeoutRef.current = setTimeout(() => {
       setCurrent((prev) => (prev + 1) % images.length);
@@ -203,4 +200,4 @@ export default function Home() {
       </section>
     </main>
   );
-} 
+}

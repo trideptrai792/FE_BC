@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import axios from "axios";
 
 const API_BASE = "http://localhost:8000";
 
@@ -23,11 +24,9 @@ export default function ProductDetail() {
         setLoading(true);
         setError("");
 
-        // 1. Lấy chi tiết sản phẩm
-        const res = await fetch(`${API_BASE}/api/products/${slug}`);
-        if (!res.ok) throw new Error("Không lấy được sản phẩm");
-
-        const json = await res.json();
+        // 1. Lấy chi tiết sản phẩm bằng axios
+        const res = await axios.get(`${API_BASE}/api/products/${slug}`);
+        const json = res.data;
         const p = json.data ?? json;
 
         // 1.1 Gộp thumbnail + images thành mảng, rồi loại trùng
@@ -48,7 +47,6 @@ export default function ProductDetail() {
           });
         }
 
-        // loại các phần tử trùng nhau
         const dedupImages = Array.from(new Set(imgList));
         const merged = {
           ...p,
@@ -59,19 +57,16 @@ export default function ProductDetail() {
         setMainImage(merged.images[0]);
 
         // 2. Lấy danh sách tất cả sản phẩm để chọn 3 sản phẩm liên quan ngẫu nhiên
-        const resAll = await fetch(`${API_BASE}/api/products`);
-        if (resAll.ok) {
-          const jsonAll = await resAll.json();
+        try {
+          const resAll = await axios.get(`${API_BASE}/api/products`);
+          const jsonAll = resAll.data;
           const list = jsonAll.data ?? [];
 
-          // bỏ sản phẩm hiện tại
           const others = list.filter((item) => item.id !== merged.id);
-
-          // trộn ngẫu nhiên
           const shuffled = [...others].sort(() => 0.5 - Math.random());
-
-          // lấy 3 sản phẩm đầu
           setRelated(shuffled.slice(0, 3));
+        } catch (err2) {
+          console.error("Lỗi load related products:", err2);
         }
       } catch (err) {
         console.error(err);
@@ -137,7 +132,6 @@ export default function ProductDetail() {
                 ${
                   mainImage === img ? "border-red-600" : "border-gray-300"
                 }`}
-                // alt KHÔNG còn thêm số 2, 3…
                 alt={product.name}
               />
             ))}
@@ -173,7 +167,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {/* RELATED PRODUCTS – random 3 sản phẩm khác */}
+      {/* RELATED PRODUCTS */}
       <div className="mt-20">
         <h2 className="text-2xl font-bold mb-6">Sản Phẩm Liên Quan</h2>
 
@@ -184,20 +178,12 @@ export default function ProductDetail() {
               className="bg-white border rounded-lg shadow p-4 hover:shadow-xl transition"
             >
               <img
-                src={
-                  item.thumbnail
-                    ? item.thumbnail
-                    : "/images/noimage.png"
-                }
+                src={item.thumbnail ? item.thumbnail : "/images/noimage.png"}
                 className="w-full h-48 object-contain"
                 alt={item.name}
               />
               <h3 className="font-semibold text-lg mt-3">{item.name}</h3>
               <p className="text-red-600 font-bold mt-2">₫{item.price}</p>
-              {/* nếu muốn có link sang chi tiết: */}
-              {/* <Link href={`/products/${item.slug}`} className="bg-red-600 text-white px-4 py-2 rounded mt-3 inline-block hover:bg-red-500">
-                Xem Chi Tiết
-              </Link> */}
             </div>
           ))}
         </div>
