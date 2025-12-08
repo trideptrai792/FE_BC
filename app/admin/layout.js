@@ -54,7 +54,7 @@ export default function AdminLayout({ children }) {
           <Link href="/admin/post" className="block p-2 rounded hover:bg-gray-200">
             Post
           </Link>
-          <Link href="/admin/user" className="block p-2 rounded hover:bg-gray-200">
+          <Link href="/admin/users" className="block p-2 rounded hover:bg-gray-200">
             User
           </Link>
           <Link href="/admin/flash-sale">Flash Sale</Link>

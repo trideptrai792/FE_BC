@@ -11,6 +11,24 @@ import {
   Button,
 } from "@heroui/react";
 import Link from "next/link";
+import menuService from "../lib/menuService";
+
+// Normalize menu href so slug-only items point to the category route
+const resolveHref = (item) => {
+  const raw = item?.link || item?.url;
+  const slug = item?.slug;
+
+  const candidate = raw || (slug ? `/danh-muc/${slug}` : "#");
+  if (!candidate) return "#";
+
+  if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+    return candidate;
+  }
+  if (candidate.startsWith("/")) {
+    return candidate;
+  }
+  return `/${candidate}`;
+};
 
 const coupons = [
   {
@@ -32,48 +50,112 @@ const coupons = [
 
 export default function Header() {
   const router = useRouter();
- const [userName, setUserName] = useState(null);
-const pathname = usePathname();
+  const pathname = usePathname();
 
-// Đọc lại auth mỗi khi đổi route + khi có event "auth-changed"
+  const [userName, setUserName] = useState(null);
+  const [mainMenu, setMainMenu] = useState([]);    // menu chính từ API
+  const [mobileOpen, setMobileOpen] = useState(false);
 
+  // ==== ĐỒNG BỘ AUTH (login/logout) ====
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
-useEffect(() => {
-  if (typeof window === "undefined") return;
+    const syncAuth = () => {
+      const token = localStorage.getItem("token");
+      const name = localStorage.getItem("displayName");
+      if (token && name) {
+        setUserName(name);
+      } else {
+        setUserName(null);
+      }
+    };
 
-  const syncAuth = () => {
-    const token = localStorage.getItem("token");
-    const name = localStorage.getItem("displayName");
-    if (token && name) {
-      setUserName(name);
-    } else {
-      setUserName(null);
+    syncAuth();
+    window.addEventListener("auth-changed", syncAuth);
+
+    return () => {
+      window.removeEventListener("auth-changed", syncAuth);
+    };
+  }, [pathname]);
+
+  const handleLogout = () => {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    localStorage.removeItem("displayName");
+    setUserName(null);
+    window.dispatchEvent(new Event("auth-changed"));
+    router.push("/login");
+  };
+
+  // ==== LOAD MAIN MENU từ API (position=mainmenu) ====
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        const menus = await menuService.fetchMenusByPosition("mainmenu");
+        setMainMenu(menus || []);
+      } catch (e) {
+        console.error("Load mainmenu error:", e);
+      }
+    };
+    loadMenu();
+  }, []);
+
+  // Render 1 item menu (có thể có children)
+  const renderMenuItem = (item) => {
+const href = item.link || item.url || item.slug || "#";
+
+    if (item.children && item.children.length > 0) {
+      // Có submenu → dropdown
+      return (
+        <div key={item.id} className="relative group">
+          <Button
+            as={Link}
+            href={href}
+            variant="flat"
+            radius="full"
+            size="sm"
+            className="bg-white/10 text-white font-semibold hover:bg-white/20 
+                       data-[hover=true]:scale-[1.02] transition-transform"
+          >
+            {item.name}
+          </Button>
+
+          <div className="absolute left-0 mt-2 min-w-[200px] bg-white text-gray-800 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-30">
+            {item.children.map((child) => {
+          const childHref = child.link || child.url || child.slug || "#";
+
+              return (
+                <Link
+                  key={child.id}
+                  href={childHref}
+                  className="block px-4 py-2 text-sm hover:bg-gray-100 rounded-xl"
+                >
+                  {child.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      );
     }
+
+    // Không có submenu
+    return (
+      <Button
+        key={item.id}
+        as={Link}
+        href={href}
+        variant="flat"
+        radius="full"
+        size="sm"
+        className="bg-white/10 text-white font-semibold hover:bg-white/20 
+                   data-[hover=true]:scale-[1.02] transition-transform"
+      >
+        {item.name}
+      </Button>
+    );
   };
-
-  // chạy ngay lần đầu
-  syncAuth();
-
-  // nghe event login/logout
-  window.addEventListener("auth-changed", syncAuth);
-
-  // cleanup
-  return () => {
-    window.removeEventListener("auth-changed", syncAuth);
-  };
-}, [pathname]);
-
-
-const handleLogout = () => {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("token");
-  localStorage.removeItem("role");
-  localStorage.removeItem("displayName");
-  setUserName(null);
-  // báo cho các component khác (Header) biết auth đã đổi
-  window.dispatchEvent(new Event("auth-changed"));
-  router.push("/login");
-};
 
   const copyCode = async (code) => {
     try {
@@ -199,6 +281,7 @@ const handleLogout = () => {
             </button>
           </NavbarItem>
 
+          {/* Nút đăng nhập/đăng xuất (desktop) */}
           <NavbarItem className="hidden sm:flex">
             {userName ? (
               <Button
@@ -222,63 +305,68 @@ const handleLogout = () => {
               </Button>
             )}
           </NavbarItem>
+
+          {/* Hamburger mobile */}
+          <NavbarItem className="sm:hidden">
+            <button
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="p-2 rounded-md border border-gray-300"
+            >
+              ☰
+            </button>
+          </NavbarItem>
         </NavbarContent>
       </Navbar>
 
-      {/* ========== RED MENU BAR ========== */}
-      <nav className="w-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white shadow-md">
-  <div className="max-w-6xl mx-auto px-4">
-    <div className="flex flex-wrap items-center gap-3 py-3 text-sm md:text-base">
-      <Button
-        as={Link}
-        href="/#whey"
-        variant="flat"
-        radius="full"
-        size="sm"
-        className="bg-white/10 text-white font-semibold hover:bg-white/20 
-                   data-[hover=true]:scale-[1.02] transition-transform"
-      >
-        Whey Protein
-      </Button>
+      {/* ========== RED MENU BAR (desktop) ========== */}
+      <nav className="w-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 text-white shadow-md hidden sm:block">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-wrap items-center gap-3 py-3 text-sm md:text-base">
+            {mainMenu.map((item) => renderMenuItem(item))}
+          </div>
+        </div>
+      </nav>
 
-      <Button
-        as={Link}
-        href="/#mass"
-        variant="flat"
-        radius="full"
-        size="sm"
-        className="bg-white/10 text-white font-semibold hover:bg-white/20 
-                   data-[hover=true]:scale-[1.02] transition-transform"
-      >
-        Mass Gainer
-      </Button>
+      {/* ========== MOBILE MENU ========== */}
+      {mobileOpen && (
+        <div className="sm:hidden bg-white border-b border-gray-200 shadow-inner">
+          <div className="max-w-6xl mx-auto px-4 py-3 space-y-2">
+            {mainMenu.map((item) => {
+              const href = item.url || item.slug || "#";
+              return (
+                <div key={item.id} className="border-b last:border-none pb-2">
+                  <Link
+                    href={href}
+                    className="block font-semibold text-gray-800 py-1"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {item.name}
+                  </Link>
 
-      <Button
-        as={Link}
-        href="/#vitamin"
-        variant="flat"
-        radius="full"
-        size="sm"
-        className="bg-white/10 text-white font-semibold hover:bg-white/20 
-                   data-[hover=true]:scale-[1.02] transition-transform"
-      >
-        Vitamin &amp; Khoáng Chất
-      </Button>
-
-      <Button
-        as={Link}
-        href="/posts"
-        variant="flat"
-        radius="full"
-        size="sm"
-        className="bg-white/10 text-white font-semibold hover:bg-white/20 
-                   data-[hover=true]:scale-[1.02] transition-transform"
-      >
-        Tin Tức &amp; Bài Viết
-      </Button>
-    </div>
-  </div>
-</nav>
+                  {item.children && item.children.length > 0 && (
+                    <div className="pl-4 space-y-1 mt-1">
+                      {item.children.map((child) => {
+                        const childHref = child.url || child.slug || "#";
+                        return (
+                          <Link
+                            key={child.id}
+                            href={childHref}
+                            className="block text-sm text-gray-600 py-0.5"
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            {child.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ========== COUPON STRIP UNDER MENU ========== */}
       <div className="w-full bg-white border-b border-red-100 shadow-sm">

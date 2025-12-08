@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import axios from "axios";
-
-
+import axiosClient from "../lib/axiosClient"; // app/posts → ../lib/axiosClient
 
 export default function BlogPage() {
   const [posts, setPosts] = useState([]);
@@ -15,13 +13,17 @@ export default function BlogPage() {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${API_BASE}/posts`);
+        setError("");
+
+        // GET /api/posts
+        const res = await axiosClient.get("/posts");
         const data = res.data;
         setPosts(data.data || []);
-        setError("");
       } catch (e) {
         console.error(e);
-        setError("Lỗi khi tải bài viết");
+        setError(
+          e.response?.data?.message || e.message || "Lỗi khi tải bài viết"
+        );
       } finally {
         setLoading(false);
       }
@@ -30,27 +32,20 @@ export default function BlogPage() {
     fetchPosts();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto p-6">
-        <p>Đang tải bài viết...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-6xl mx-auto p-6">
-        <p className="text-red-600">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-4xl font-bold mb-8 text-center">
         Tin Tức &amp; Bài Viết
       </h1>
+
+      {error && (
+        <p className="mb-4 text-center text-red-600 text-sm">{error}</p>
+      )}
+      {loading && (
+        <p className="mb-4 text-center text-gray-500 text-sm">
+          Đang tải dữ liệu...
+        </p>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {posts.map((post) => (
@@ -73,12 +68,18 @@ export default function BlogPage() {
 
             <Link
               href={`/posts/${post.slug}`}
-              className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 text-sm"
+              className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500"
             >
               Đọc thêm
             </Link>
           </div>
         ))}
+
+        {!loading && !error && posts.length === 0 && (
+          <p className="col-span-full text-center text-gray-500">
+            Chưa có bài viết nào.
+          </p>
+        )}
       </div>
     </div>
   );
