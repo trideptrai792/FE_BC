@@ -1,46 +1,64 @@
 "use client";
 
-import axiosClient from "./axiosClient"; // đã có sẵn
-
-// Xây tree từ mảng phẳng (dựa vào parent_id)
-function buildMenuTree(items) {
-  const map = {};
-  const roots = [];
-
-  items.forEach((item) => {
-    map[item.id] = { ...item, children: [] };
-  });
-
-  items.forEach((item) => {
-    if (item.parent_id && map[item.parent_id]) {
-      map[item.parent_id].children.push(map[item.id]);
-    } else {
-      roots.push(map[item.id]);
-    }
-  });
-
-  // sort theo sort_order trong cùng 1 cấp
-  const sortTree = (nodes) => {
-    nodes.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-    nodes.forEach((n) => sortTree(n.children));
-  };
-  sortTree(roots);
-
-  return roots;
-}
-
-async function fetchMenusByPosition(position) {
-  const res = await axiosClient.get("/menus", {
-    params: { position },
-  });
-
-  const raw = res.data.data || res.data || [];
-  return buildMenuTree(raw);
-}
+import axiosClient from "./axiosClient";
 
 const menuService = {
-  fetchMenusByPosition,
+  // --- ADMIN API ---
+
+  async getAdminList(page = 1) {
+    const res = await axiosClient.get(`/admin/menus?page=${page}`);
+    return res.data; // { data, meta }
+  },
+
+  // Bỏ hàm này nếu BE chưa có route /admin/menus/{id}
+  async getById(id) {
+    const res = await axiosClient.get(`/admin/menus/${id}`);
+    return res.data.data || res.data;
+  },
+
+  async create(payload) {
+    const body = {
+      name: payload.name,
+      link: payload.link,
+      type: payload.type,
+      position: payload.position,
+      sort_order: Number(payload.sort_order) || 0,
+      parent_id: payload.parent_id ? Number(payload.parent_id) : null,
+      status: Number(payload.status),
+    };
+    const res = await axiosClient.post("/admin/menus", body);
+    return res.data.data || res.data;
+  },
+
+  async update(id, payload) {
+    const body = {
+      name: payload.name,
+      link: payload.link,
+      type: payload.type,
+      position: payload.position,
+      sort_order: Number(payload.sort_order) || 0,
+      parent_id: payload.parent_id ? Number(payload.parent_id) : null,
+      status: Number(payload.status),
+    };
+    const res = await axiosClient.put(`/admin/menus/${id}`, body);
+    return res.data.data || res.data;
+  },
+
+  async remove(id) {
+    await axiosClient.delete(`/admin/menus/${id}`);
+  },
+
+  // --- CLIENT PUBLIC ---
+
+  async getByPosition(position = "mainmenu") {
+    const res = await axiosClient.get("/menus", { params: { position } });
+    return res.data.data || res.data;
+  },
+
+  // alias để Header gọi cho đúng
+  fetchMenusByPosition(position = "mainmenu") {
+    return this.getByPosition(position);
+  },
 };
 
 export default menuService;
-export { buildMenuTree };

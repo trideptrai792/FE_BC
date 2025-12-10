@@ -1,74 +1,94 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { HeroUIProvider, Card, Listbox, ListboxItem, Spacer, Spinner } from "@heroui/react";
+
+const NAV_ITEMS = [
+  { href: "/admin/category", label: "Category" },
+  { href: "/admin/product", label: "Product" },
+  { href: "/admin/post", label: "Post" },
+  { href: "/admin/users", label: "User" },
+  { href: "/admin/flash-sale", label: "Flash Sale" },
+  { href: "/admin/menus", label: "Menu" },
+];
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
-  const [allowed, setAllowed] = useState(false);
+  const pathname = usePathname();
+  const [status, setStatus] = useState("checking"); // checking | denied | ok
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
-
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
     if (!token || role !== "admin") {
-      // Không có token hoặc không phải admin => đá về /login
+      setStatus("denied");
       router.replace("/login");
-      setAllowed(false);
-    } else {
-      setAllowed(true);
+      return;
     }
-    setChecked(true);
+    setStatus("ok");
   }, [router]);
 
-  if (!checked) {
+  const navItems = useMemo(
+    () =>
+      NAV_ITEMS.map((item) => ({
+        ...item,
+        active: pathname?.startsWith(item.href),
+      })),
+    [pathname]
+  );
+
+  if (status === "checking") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Đang kiểm tra quyền truy cập...
-      </div>
+      <HeroUIProvider>
+        <div className="min-h-screen flex items-center justify-center text-sm text-gray-600">
+          <Spinner size="sm" color="primary" /> <span className="ml-2">Đang kiểm tra quyền truy cập...</span>
+        </div>
+      </HeroUIProvider>
     );
   }
 
-  if (!allowed) {
-    // Đã redirect, tạm thời không render gì
-    return null;
-  }
+  if (status === "denied") return null;
 
-  // Nếu qua được, render giao diện admin như cũ
   return (
-    <div className="min-h-screen flex bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md flex flex-col">
-        <div className="p-6 font-bold text-xl border-b">Admin Panel</div>
-        <nav className="flex-1 p-4 space-y-2">
-          <Link href="/admin/category" className="block p-2 rounded hover:bg-gray-200">
-            Category
-          </Link>
-          <Link href="/admin/product" className="block p-2 rounded hover:bg-gray-200">
-            Product
-          </Link>
-          <Link href="/admin/post" className="block p-2 rounded hover:bg-gray-200">
-            Post
-          </Link>
-          <Link href="/admin/users" className="block p-2 rounded hover:bg-gray-200">
-            User
-          </Link>
-          <Link href="/admin/flash-sale">Flash Sale</Link>
-        </nav>
-      </aside>
+    <HeroUIProvider>
+      <div className="min-h-screen flex bg-gray-50">
+        {/* Sidebar */}
+        <Card className="w-64 h-screen rounded-none shadow-sm border-r border-default-200">
+          <div className="px-6 py-5 border-b border-default-200">
+            <h1 className="text-lg font-semibold">Admin Panel</h1>
+            <p className="text-xs text-default-500">Quản trị hệ thống</p>
+          </div>
+          <div className="flex-1 overflow-auto px-4 py-4">
+            <Listbox aria-label="Admin navigation" variant="flat" color="primary">
+              {navItems.map((item) => (
+                <ListboxItem
+                  key={item.href}
+                  href={item.href}
+                  as={Link}
+                  className={item.active ? "font-semibold" : ""}
+                  variant={item.active ? "solid" : "light"}
+                >
+                  {item.label}
+                </ListboxItem>
+              ))}
+            </Listbox>
+          </div>
+        </Card>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        <header className="mb-6 border-b pb-4">
-          <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-        </header>
+        {/* Main */}
+        <main className="flex-1 p-6">
+          <header className="mb-6 pb-4 border-b border-default-200">
+            <p className="text-xs uppercase text-default-400">Admin Dashboard</p>
+            <h2 className="text-2xl font-semibold text-default-900">Quản lý</h2>
+          </header>
 
-        {children}
-      </main>
-    </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-default-200 p-4 sm:p-6">
+            {children}
+          </div>
+        </main>
+      </div>
+    </HeroUIProvider>
   );
 }
