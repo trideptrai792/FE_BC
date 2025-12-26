@@ -21,20 +21,32 @@ export default function Home() {
 
   const [current, setCurrent] = useState(0);
   const [products, setProducts] = useState([]);
+  const [newProducts, setNewProducts] = useState([]);
+
   const timeoutRef = useRef(null);
 
   // Fetch tất cả sản phẩm từ API
-   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const productsData = await productService.getAll();
-        setProducts(productsData);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      }
-    };
-    fetchData();
-  }, []);
+  useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const productsData = await productService.getAll();
+      setProducts(productsData);
+const newData = await productService.getNew(10);
+setNewProducts(
+  newData.map((p) => ({
+    ...p,
+    price_origin: p.price_origin ?? p.price ?? null,
+    price_sale: p.price_sale ?? null,
+    price_display: p.price_display ?? p.price_sale ?? p.price ?? 0,
+    price: p.price_display ?? p.price_sale ?? p.price ?? 0,
+  }))
+);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+  fetchData();
+}, []);
   const startAutoSlide = () => {
     timeoutRef.current = setTimeout(() => {
       setCurrent((prev) => (prev + 1) % images.length);
@@ -141,6 +153,23 @@ export default function Home() {
 
       {/* FLASH SALE ngay dưới banner */}
       <FlashSaleSection />
+      <section className="w-full max-w-6xl mx-auto mt-10 px-4 md:px-6">
+  <h2 className="text-2xl md:text-3xl font-bold mb-4 text-left">
+    Sản Phẩm Mới
+  </h2>
+
+  <div className="bg-white rounded-3xl p-6 shadow-sm">
+    {newProducts.length === 0 ? (
+      <p className="text-gray-500 text-sm">Chưa có sản phẩm mới.</p>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {newProducts.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    )}
+  </div>
+</section>
 
       {/* WHEY PROTEIN */}
       <section id="whey" className="w-full max-w-6xl mx-auto mt-10 px-4 md:px-6">

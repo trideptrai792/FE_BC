@@ -10,14 +10,51 @@ const getImageUrl = (imagePath) => {
     : `http://localhost:8000${imagePath}`;
 };
 
+const fmt = (n) => Number(n || 0).toLocaleString("vi-VN") + " đ";
+const normalizePrice = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return value;
+ if (typeof value === "string") {
+   const numeric = value.replace(/[^\d.-]/g, "");
+    if (!numeric) return null;
+    return Number(numeric);
+  }
+  const parsed = Number(value);
+  return Number.isNaN(parsed) ? null : parsed;
+};
+
 export default function ProductCard({ product }) {
-  const price =
-    typeof product.price === "string"
-      ? product.price
-      : Number(product.price || 0).toLocaleString("vi-VN") + " đ";
+ 
+  const priceSale = normalizePrice(
+   product.price_sale ?? product.priceSale ?? null
+ );
+ const priceOrigin = normalizePrice(
+   product.price_origin ?? product.priceOrigin ?? product.price
+ );
+ const priceDisplay = normalizePrice(
+   product.price_display ?? priceSale ?? product.price
+ );
+
+  const hasSale =
+    priceSale !== null &&
+    priceOrigin !== null &&
+    Number(priceSale) > 0 &&
+    Number(priceOrigin) > 0 &&
+    Number(priceSale) < Number(priceOrigin);
+
+  const discountPercent = hasSale
+    ? Math.round(100 - (Number(priceSale) / Number(priceOrigin)) * 100)
+    : null;
 
   return (
-    <div className="bg-white text-gray-900 rounded-2xl shadow-md border border-blue-100 card-hover flex flex-col">
+    <div className="bg-white text-gray-900 rounded-2xl shadow-md border border-blue-100 card-hover flex flex-col relative overflow-hidden">
+      {/* Badge giảm giá */}
+      {hasSale && (
+        <div className="absolute top-3 left-3 z-10 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+          GIẢM {discountPercent}%
+        </div>
+      )}
+
       {/* Ảnh */}
       <div className="w-full h-56 flex items-center justify-center bg-white rounded-t-2xl">
         <img
@@ -29,15 +66,22 @@ export default function ProductCard({ product }) {
 
       {/* Nội dung */}
       <div className="flex-1 flex flex-col items-center px-4 py-4 text-center gap-2">
-        <h3 className="text-lg font-semibold text-blue-900">
-          {product.name}
-        </h3>
+        <h3 className="text-lg font-semibold text-blue-900">{product.name}</h3>
 
-        <p className="text-red-600 font-bold text-xl">{price}</p>
+        {/* Giá */}
+        <div className="flex items-baseline gap-2">
+          <p className="text-red-600 font-bold text-xl">
+            {fmt(hasSale ? priceSale : priceDisplay)}
+          </p>
 
-        <p className="text-sm text-gray-600 line-clamp-2">
-          {product.content}
-        </p>
+          {hasSale && (
+            <p className="text-sm text-gray-400 line-through">
+              {fmt(priceOrigin)}
+            </p>
+          )}
+        </div>
+
+        <p className="text-sm text-gray-600 line-clamp-2">{product.content}</p>
 
         <div className="mt-3 flex gap-3 w-full">
           <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-500 text-sm font-semibold">

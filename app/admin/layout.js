@@ -8,10 +8,13 @@ import { HeroUIProvider, Card, Listbox, ListboxItem, Spacer, Spinner } from "@he
 const NAV_ITEMS = [
   { href: "/admin/category", label: "Category" },
   { href: "/admin/product", label: "Product" },
+  { href: "/admin/product-store", label: "Tồn kho" },
   { href: "/admin/post", label: "Post" },
   { href: "/admin/users", label: "User" },
   { href: "/admin/flash-sale", label: "Flash Sale" },
   { href: "/admin/menus", label: "Menu" },
+  { href: "/admin/product-sale", label: "Giá Sale" },
+  { href: "/admin/product-store-logs", label: "Stock Logs" },
 ];
 
 export default function AdminLayout({ children }) {

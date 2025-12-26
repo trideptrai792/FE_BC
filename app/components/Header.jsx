@@ -123,7 +123,7 @@ const href = item.link || item.url || item.slug || "#";
 
           <div className="absolute left-0 mt-2 min-w-[200px] bg-white text-gray-800 rounded-xl shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-30">
             {item.children.map((child) => {
-          const childHref = child.link || child.url || child.slug || "#";
+        const childHref = resolveHref(child);
 
               return (
                 <Link
@@ -333,7 +333,7 @@ const href = item.link || item.url || item.slug || "#";
         <div className="sm:hidden bg-white border-b border-gray-200 shadow-inner">
           <div className="max-w-6xl mx-auto px-4 py-3 space-y-2">
             {mainMenu.map((item) => {
-              const href = item.url || item.slug || "#";
+       const href = resolveHref(item);
               return (
                 <div key={item.id} className="border-b last:border-none pb-2">
                   <Link
@@ -347,7 +347,7 @@ const href = item.link || item.url || item.slug || "#";
                   {item.children && item.children.length > 0 && (
                     <div className="pl-4 space-y-1 mt-1">
                       {item.children.map((child) => {
-                        const childHref = child.url || child.slug || "#";
+                  const childHref = resolveHref(child);
                         return (
                           <Link
                             key={child.id}

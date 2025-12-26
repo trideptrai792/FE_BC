@@ -16,6 +16,7 @@ export default function ProductDetail() {
   const [error, setError] = useState("");
   const [related, setRelated] = useState([]);
 
+
   useEffect(() => {
     if (!slug) return;
 
@@ -48,6 +49,8 @@ export default function ProductDetail() {
         }
 
         const dedupImages = Array.from(new Set(imgList));
+
+        // merged giữ nguyên mọi field từ BE, bao gồm cả attributes
         const merged = {
           ...p,
           images: dedupImages.length > 0 ? dedupImages : ["/images/noimage.png"],
@@ -94,7 +97,8 @@ export default function ProductDetail() {
       </div>
     );
   }
-
+const priceDisplay = product.price_display ?? product.price;
+const priceOrigin = product.price_origin ?? product.price;
   const shortDesc =
     product.content ||
     "Sản phẩm chất lượng cao, đang cập nhật mô tả chi tiết.";
@@ -129,9 +133,8 @@ export default function ProductDetail() {
                 src={img}
                 onClick={() => setMainImage(img)}
                 className={`w-24 h-24 object-contain cursor-pointer rounded border p-1 
-                ${
-                  mainImage === img ? "border-red-600" : "border-gray-300"
-                }`}
+                ${mainImage === img ? "border-red-600" : "border-gray-300"
+                  }`}
                 alt={product.name}
               />
             ))}
@@ -142,14 +145,46 @@ export default function ProductDetail() {
         <div>
           <h1 className="text-3xl font-bold mb-3">{product.name}</h1>
 
-          <p className="text-2xl text-red-600 font-bold mb-4">
-            ₫{product.price}
-          </p>
+       <p className="text-2xl text-red-600 font-bold mb-2">
+  ₫{Number(priceDisplay).toLocaleString("vi-VN")}
+</p>
+{priceDisplay !== priceOrigin && (
+  <p className="text-base text-gray-400 line-through mb-4">
+    ₫{Number(priceOrigin).toLocaleString("vi-VN")}
+  </p>
+)}
 
           <div className="flex items-center mb-4">
             <span className="text-yellow-500 text-xl">★★★★★</span>
             <span className="text-gray-500 ml-2">(128 đánh giá)</span>
           </div>
+
+       {product.product_attributes?.length > 0 && (
+  <div className="mt-4">
+    <h4 className="font-semibold mb-2">Thuộc tính</h4>
+    <ul className="space-y-1 text-sm text-gray-700">
+      {product.product_attributes.map((attr) => (
+        <li key={attr.id}>
+          <span className="font-medium">
+            {attr.attribute_name || `Thuộc tính ${attr.attribute_id}`}:
+          </span>{" "}
+          {attr.value}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+{/* Tồn kho */}
+<div className="mb-4 text-sm text-gray-700">
+  {typeof product.stock === "number" && product.stock > 0 ? (
+    <span className="text-green-600 font-semibold">
+      Còn {product.stock} sản phẩm
+    </span>
+  ) : (
+    <span className="text-red-600 font-semibold">Hết hàng</span>
+  )}
+</div>
+
 
           <p className="text-gray-700 text-lg mb-6">{shortDesc}</p>
 

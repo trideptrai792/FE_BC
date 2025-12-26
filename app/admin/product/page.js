@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -71,6 +71,7 @@ export default function AdminProductListPage() {
               <th className="p-2 text-left">Slug</th>
               <th className="p-2 text-left">Giá</th>
               <th className="p-2 text-left">Ảnh</th>
+              <th className="p-2 text-left">Tồn kho</th> {/* thêm cột tồn kho */}
               <th className="p-2 text-left">Trạng thái</th>
               <th className="p-2 text-left">Hành động</th>
             </tr>
@@ -91,9 +92,11 @@ export default function AdminProductListPage() {
                     />
                   )}
                 </td>
+                <td className="p-2">{p.stock ?? 0}</td> {/* hiển thị tồn kho */}
                 <td className="p-2">
                   {p.status === 1 ? "Hiển thị" : "Ẩn"}
                 </td>
+
                 <td className="p-2 flex gap-2">
                   <Link
                     href={`/admin/product/${p.id}/edit`}
@@ -113,7 +116,7 @@ export default function AdminProductListPage() {
 
             {products.length === 0 && (
               <tr>
-                <td colSpan="7" className="p-4 text-center text-gray-500">
+                <td colSpan={8} className="p-4 text-center text-gray-500">
                   Chưa có sản phẩm nào
                 </td>
               </tr>

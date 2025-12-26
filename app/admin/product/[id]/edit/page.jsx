@@ -11,6 +11,7 @@ const emptyForm = {
   thumbnail: "",
   content: "",
   category_id: "",
+  stock: "",   // NEW
   status: 1,
 };
 
@@ -24,6 +25,9 @@ export default function AdminProductEditPage() {
   const [error, setError] = useState("");
   const [productName, setProductName] = useState("");
 
+  const [attributes, setAttributes] = useState([]);
+  const [selectedAttributes, setSelectedAttributes] = useState({});
+
   useEffect(() => {
     if (!id) return;
 
@@ -32,10 +36,10 @@ export default function AdminProductEditPage() {
         setLoading(true);
         setError("");
 
-        // Lấy list rồi find theo id (tránh 404 nếu không có /products/{id})
+        // Lấy list rồi find theo id
         const res = await axiosClient.get("/products");
         const data = res.data;
-        const list = data.data || [];
+        const list = data.data || data || [];
         const p = list.find((item) => String(item.id) === String(id));
 
         if (!p) {
@@ -44,15 +48,38 @@ export default function AdminProductEditPage() {
         }
 
         setProductName(p.name || "");
+
         setForm({
           name: p.name || "",
           slug: p.slug || "",
-          price: p.price?.replace(/[^\d.]/g, "") || "",
+          // nếu BE trả price dạng số thì chỉ cần String(p.price)
+          price: typeof p.price === "number"
+            ? String(p.price)
+            : (p.price?.replace(/[^\d.]/g, "") || ""),
           thumbnail: p.thumbnail || "",
           content: p.content || "",
           category_id: p.category_id || "",
+          stock: p.stock ?? "",      // NEW
           status: p.status ?? 1,
         });
+
+        // 2. Lấy list attributes
+        const resAttr = await axiosClient.get("/attributes");
+        const listAttr = resAttr.data?.data || resAttr.data || [];
+        setAttributes(listAttr);
+
+        // 3. Khởi tạo selectedAttributes từ product.attributes (nếu index có trả)
+        // p.attributes: [{ attribute_id, value, ... }]
+        const sa = {};
+        (p.attributes || []).forEach((pa) => {
+          const attr = listAttr.find((a) => a.id === pa.attribute_id);
+          if (!attr) return;
+          const val = (attr.values || []).find((v) => v.value === pa.value);
+          if (val) {
+            sa[attr.id] = val.id;
+          }
+        });
+        setSelectedAttributes(sa);
       } catch (e) {
         console.error(e);
         setError(e.message || "Không tải được thông tin sản phẩm");
@@ -67,6 +94,10 @@ export default function AdminProductEditPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAttrChange = (attrId, valueId) => {
+    setSelectedAttributes((prev) => ({ ...prev, [attrId]: valueId }));
   };
 
   const handleThumbnailFileChange = async (e) => {
@@ -95,7 +126,9 @@ export default function AdminProductEditPage() {
       alert("Upload ảnh thành công");
     } catch (e) {
       console.error(e);
-      setError(e.response?.data?.message || e.message || "Lỗi khi upload ảnh");
+      setError(
+        e.response?.data?.message || e.message || "Lỗi khi upload ảnh"
+      );
     }
   };
 
@@ -106,21 +139,41 @@ export default function AdminProductEditPage() {
     try {
       setError("");
 
+      // 1) update product
       const payload = {
         ...form,
         price: Number(form.price),
         category_id: form.category_id ? Number(form.category_id) : null,
+        stock: form.stock === "" ? 0 : Number(form.stock), // NEW
         status: Number(form.status),
       };
 
       await axiosClient.put(`/products/${id}`, payload);
 
-      alert("Cập nhật sản phẩm thành công");
+      // 2) ghi thuộc tính vào product_attributes
+      for (const [attrId, valueId] of Object.entries(selectedAttributes)) {
+        if (!valueId) continue;
+
+        const attr = attributes.find((a) => a.id === Number(attrId));
+        const valObj = attr?.values?.find(
+          (v) => v.id === Number(valueId)
+        );
+        const textValue = valObj?.value;
+        if (!textValue) continue;
+
+        await axiosClient.post("/product-attributes", {
+          product_id: Number(id),
+          attribute_id: Number(attrId),
+          value: textValue,
+        });
+      }
+
+      alert("Cập nhật sản phẩm + thuộc tính thành công");
       router.push("/admin/product");
     } catch (e) {
       console.error(e);
       setError(
-        e.response?.data?.message || e.message || "Lỗi khi cập nhật sản phẩm"
+        e.response?.data?.message || e.message || "Lỗi khi cập nhật"
       );
     }
   };
@@ -191,6 +244,19 @@ export default function AdminProductEditPage() {
           />
         </div>
 
+        {/* NEW: Tồn kho */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Tồn kho</label>
+          <input
+            type="number"
+            name="stock"
+            min={0}
+            value={form.stock}
+            onChange={handleChange}
+            className="w-full border rounded px-2 py-1"
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">
             Thumbnail (URL)
@@ -241,6 +307,7 @@ export default function AdminProductEditPage() {
           />
         </div>
 
+        {/* Trạng thái */}
         <div>
           <label className="block text-sm font-medium mb-1">Trạng thái</label>
           <select
@@ -252,6 +319,37 @@ export default function AdminProductEditPage() {
             <option value={1}>Hiển thị</option>
             <option value={0}>Ẩn</option>
           </select>
+        </div>
+
+        {/* Thuộc tính */}
+        <div className="md:col-span-2">
+          <h4 className="font-semibold mb-2">Thuộc tính</h4>
+          <div className="grid md:grid-cols-2 gap-3">
+            {attributes.map((attr) => (
+              <div key={attr.id}>
+                <label className="block text-sm font-medium mb-1">
+                  {attr.name}
+                </label>
+                <select
+                  value={selectedAttributes[attr.id] || ""}
+                  onChange={(e) =>
+                    handleAttrChange(
+                      attr.id,
+                      e.target.value ? Number(e.target.value) : ""
+                    )
+                  }
+                  className="w-full border rounded px-2 py-1"
+                >
+                  <option value="">-- chọn --</option>
+                  {(attr.values || []).map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="md:col-span-2 flex gap-3 mt-2">
