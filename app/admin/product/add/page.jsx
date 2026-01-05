@@ -19,7 +19,6 @@ export default function AdminProductAddPage() {
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
 
-  // NEW: danh sách attribute + lựa chọn của user
   const [attributes, setAttributes] = useState([]);
   const [selectedAttributes, setSelectedAttributes] = useState({});
 
@@ -27,7 +26,6 @@ export default function AdminProductAddPage() {
     axiosClient
       .get("/attributes")
       .then((res) => {
-        // Tùy BE: {data: [...]} hoặc [...]
         const data = res.data?.data || res.data || [];
         setAttributes(data);
       })
@@ -67,74 +65,68 @@ export default function AdminProductAddPage() {
       alert("Upload ảnh thành công");
     } catch (e) {
       console.error(e);
-      setError(
-        e.response?.data?.message || e.message || "Lỗi khi upload ảnh"
-      );
+      setError(e.response?.data?.message || e.message || "Lỗi khi upload ảnh");
     }
   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  try {
-    setError("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    const payload = {
-      ...form,
-      price: Number(form.price),
-      stock: form.stock ? Number(form.stock) : 0,
-      category_id: form.category_id ? Number(form.category_id) : null,
-      status: Number(form.status),
-    };
+    try {
+      setError("");
 
-    // 1. Tạo sản phẩm
-    const productRes = await axiosClient.post("/products", payload);
-    const productData = productRes.data?.data || productRes.data || {};
-    const productId = productData.id;
+      const payload = {
+        name: form.name,
+        slug: form.slug,
+        price: Number(form.price),
+        thumbnail: form.thumbnail,
+        content: form.content,
+        category_id: form.category_id ? Number(form.category_id) : null,
+        status: Number(form.status),
+      };
 
-    if (!productId) {
-      throw new Error("Không lấy được ID sản phẩm");
+      const productRes = await axiosClient.post("/products", payload);
+      const productData = productRes.data?.data || productRes.data || {};
+      const productId = productData.id;
+
+      if (!productId) {
+        throw new Error("Không lấy được ID sản phẩm");
+      }
+
+      for (const [attrId, valueId] of Object.entries(selectedAttributes)) {
+        if (!valueId) continue;
+
+        const attr = attributes.find((a) => a.id === Number(attrId));
+        const val =
+          (attr?.values || []).find((v) => v.id === Number(valueId)) || null;
+
+        const textValue = val?.value || "";
+        if (!textValue) continue;
+
+        await axiosClient.post("/product-attributes", {
+          product_id: productId,
+          attribute_id: Number(attrId),
+          value: textValue,
+        });
+      }
+
+      alert("Thêm sản phẩm + thuộc tính thành công");
+      router.push("/admin/product");
+    } catch (e) {
+      console.error(e);
+      const data = e.response?.data;
+
+      if (data?.errors) {
+        const firstKey = Object.keys(data.errors)[0];
+        const firstMsg = data.errors[firstKey][0];
+        setError(firstMsg);
+      } else if (data?.message) {
+        setError(data.message);
+      } else {
+        setError(e.message || "Lỗi khi thêm sản phẩm");
+      }
     }
-
-    // (Tuỳ bạn: nếu vẫn cần variant thì giữ đoạn tạo variant, nếu không cần thì có thể bỏ hoàn toàn)
-    // const variantRes = await axiosClient.post("/product-variants", {...});
-    // ...
-
-    // 2. Gán thuộc tính cho product qua /product-attributes
-    for (const [attrId, valueId] of Object.entries(selectedAttributes)) {
-      if (!valueId) continue;
-
-      // Tìm text value tương ứng từ `attributes` đang có trên FE
-      const attr = attributes.find((a) => a.id === Number(attrId));
-      const val =
-        (attr?.values || []).find((v) => v.id === Number(valueId)) || null;
-
-      const textValue = val?.value || "";
-
-      if (!textValue) continue; // tránh gửi rỗng, sẽ fail validate
-
-      await axiosClient.post("/product-attributes", {
-        product_id: productId,
-        attribute_id: Number(attrId),
-        value: textValue,
-      });
-    }
-
-    alert("Thêm sản phẩm + thuộc tính thành công");
-    router.push("/admin/product");
-  } catch (e) {
-    console.error(e);
-    const data = e.response?.data;
-    if (data?.errors) {
-      const firstKey = Object.keys(data.errors)[0];
-      const firstMsg = data.errors[firstKey][0];
-      setError(firstMsg);
-    } else if (data?.message) {
-      setError(data.message);
-    } else {
-      setError(e.message || "Lỗi khi thêm sản phẩm");
-    }
-  }
-};
+  };
 
   return (
     <div>
@@ -185,18 +177,6 @@ const handleSubmit = async (e) => {
             placeholder="Ví dụ: 1250000"
           />
         </div>
-        <div>
-  <label className="block text-sm font-medium mb-1">Tồn kho</label>
-  <input
-    type="number"
-    name="stock"
-    min={0}
-    value={form.stock}
-    onChange={handleChange}
-    className="w-full border rounded px-2 py-1"
-    placeholder="Ví dụ: 10"
-  />
-</div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -237,9 +217,7 @@ const handleSubmit = async (e) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Category ID
-          </label>
+          <label className="block text-sm font-medium mb-1">Category ID</label>
           <input
             name="category_id"
             value={form.category_id}
@@ -262,12 +240,10 @@ const handleSubmit = async (e) => {
           </select>
         </div>
 
-        {/* NEW: chọn attribute/value */}
         {attributes.length > 0 && (
           <div className="md:col-span-2 border rounded p-3 space-y-3">
-            <p className="text-sm font-semibold mb-1">
-              Thuộc tính sản phẩm
-            </p>
+            <p className="text-sm font-semibold mb-1">Thuộc tính sản phẩm</p>
+
             {attributes.map((attr) => (
               <div key={attr.id}>
                 <label className="block text-sm font-medium mb-1">
@@ -279,9 +255,7 @@ const handleSubmit = async (e) => {
                   onChange={(e) =>
                     setSelectedAttributes((prev) => ({
                       ...prev,
-                      [attr.id]: e.target.value
-                        ? Number(e.target.value)
-                        : "",
+                      [attr.id]: e.target.value ? Number(e.target.value) : "",
                     }))
                   }
                 >

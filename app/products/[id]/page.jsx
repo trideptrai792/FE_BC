@@ -9,7 +9,8 @@ const API_BASE = "http://localhost:8000";
 export default function ProductDetail() {
   const params = useParams();
   const slug = params?.id; // [id] => params.id
-
+const [adding, setAdding] = useState(false);
+const [addMsg, setAddMsg] = useState("");
   const [product, setProduct] = useState(null);
   const [mainImage, setMainImage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -81,6 +82,44 @@ export default function ProductDetail() {
 
     fetchData();
   }, [slug]);
+
+  const handleAddToCart = async () => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) {
+    router.push("/login");
+    return;
+  }
+
+  if (typeof product?.stock === "number" && product.stock <= 0) {
+    setAddMsg("Sản phẩm đã hết hàng.");
+    return;
+  }
+
+  try {
+    setAdding(true);
+    setAddMsg("");
+
+    await axios.post(
+      `${API_BASE}/api/cart/items`,
+      {
+        product_id: product.id,
+        qty: 1,
+        variant: {}, // nếu có chọn size/màu thì truyền vào đây
+      },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    setAddMsg("Đã thêm vào giỏ hàng.");
+    // muốn chuyển sang trang giỏ hàng thì mở dòng dưới
+    // router.push("/cart");
+  } catch (e) {
+    setAddMsg("Thêm vào giỏ thất bại.");
+  } finally {
+    setAdding(false);
+  }
+};
 
   if (loading || !slug) {
     return (
@@ -187,10 +226,15 @@ const priceOrigin = product.price_origin ?? product.price;
 
 
           <p className="text-gray-700 text-lg mb-6">{shortDesc}</p>
+<button
+  onClick={handleAddToCart}
+  disabled={adding || (typeof product.stock === "number" && product.stock <= 0)}
+  className="bg-red-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-red-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
+>
+  {adding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+</button>
 
-          <button className="bg-red-600 text-white px-6 py-3 rounded-lg text-lg hover:bg-red-500 transition">
-            Thêm vào giỏ hàng
-          </button>
+{addMsg && <p className="mt-3 text-sm text-gray-700">{addMsg}</p>}
 
           <div className="mt-10">
             <h2 className="text-xl font-semibold mb-2">Công Dụng</h2>
