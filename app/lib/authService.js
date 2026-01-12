@@ -15,8 +15,8 @@ function saveAuthToStorage(data) {
   if (data.user?.name) {
     localStorage.setItem(NAME_KEY, data.user.name);
   }
-  if (data.user?.role) {
-    localStorage.setItem(ROLE_KEY, data.user.role);
+  if (data.user?.roles) {
+    localStorage.setItem(ROLE_KEY, data.user.roles);
   }
 }
 
@@ -41,32 +41,29 @@ function getCurrentUser() {
 }
 
 const authService = {
-  // Đăng nhập: POST /api/login (Laravel trả {token, user})
-  async login(email, password) {
-    const res = await axiosClient.post("/login", { email, password });
+  async login(login, password) {
+    const res = await axiosClient.post("/auth/login", { login, password });
     const data = res.data;
     saveAuthToStorage(data);
-    return data; // { message, token, user }
+    return data;
   },
 
-  // Đăng ký: POST /api/register (đúng format bạn đã viết ở BE)
-  async register(name, email, password) {
-    const res = await axiosClient.post("/register", {
+  async register(name, email, phone, password) {
+    const res = await axiosClient.post("/auth/register", {
       name,
       email,
+      phone,
       password,
     });
     const data = res.data;
     saveAuthToStorage(data);
-    return data; // { message, token, user }
+    return data;
   },
 
-  // Đăng xuất phía FE (xoá token local)
   logout() {
     clearAuthFromStorage();
   },
 
-  // Helpers
   getToken,
   getCurrentUser,
   isLoggedIn() {

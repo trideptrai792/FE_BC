@@ -19,6 +19,7 @@ axiosClient.interceptors.request.use((config) => {
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
+   config.headers.Accept = "application/json";
   return config;
 });
 
