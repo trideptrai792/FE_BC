@@ -15,7 +15,8 @@ const NAV_ITEMS = [
   { href: "/admin/menus", label: "Menu" },
   { href: "/admin/product-sale", label: "Giá Sale" },
   { href: "/admin/product-store-logs", label: "Stock Logs" },
-  { href: "/admin/carts", label: "Gio Hang" }
+  { href: "/admin/carts", label: "Gio Hang" },
+  { href: "/admin/orders", label: "Quan li Don Hang" }
 ];
 
 export default function AdminLayout({ children }) {
